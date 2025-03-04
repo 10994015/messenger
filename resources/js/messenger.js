@@ -4,6 +4,7 @@
  * --------------------------------------------------------------------------
 */
 var temporaryMessageID = 0;
+var activeUserIds = [];
 
 const getMessengerID = () => document.querySelector("meta[name='id']").getAttribute('content');
 const setMessengerID = (id) => document.querySelector("meta[name='id']").setAttribute('content', id);
@@ -239,6 +240,7 @@ const getContacts = async ()=>{
         if(messengerContactBox.querySelector('.contacts-loader')){
             messengerContactBox.querySelector('.contacts-loader').remove();
         }
+        updateUserActiveList();
     }catch(error){
         contactsLoading = false;
         if(messengerContactBox.querySelector('.contacts-loader')){
@@ -331,6 +333,11 @@ const updateContactItem = async (user_id)=>{
         });
         messengerContactBox.querySelector(`.messenger_list_item[data-id="${user_id}"]`).remove();
         messengerContactBox.insertAdjacentHTML('afterbegin', response.data.contact_item);
+
+        if(activeUserIds.includes(+user_id)){
+            userActive(user_id);
+        }
+
         if(user_id === getMessengerID()){
             updateSelectedContent(user_id);
         }
@@ -626,7 +633,31 @@ favourite.addEventListener('click', (e)=>{
     star(getMessengerID());
 });
 
+const setActiveUserIds = (users)=>{
+    //users is [{id:1}, {id:2}...]
+    activeUserIds = users.map(user=>user.id);
+}
 
+const addActiveNewId = (id)=>{
+    activeUserIds.push(id);
+}
+
+const removeActiveIs = (id)=>{
+    activeUserIds = activeUserIds.filter(user=>user !== id);
+}
+
+const updateUserActiveList = ()=>{
+    const contactItems = document.querySelectorAll(`.messenger_list_item`);
+    for(let i=0;i<contactItems.length;i++){
+        //get data-id value
+        const userId = contactItems[i].getAttribute('data-id');
+        if (activeUserIds.includes(+userId)) {
+            userActive(userId);
+        } else {
+            userInactive(userId);
+        }
+    }
+}
 window.Echo.private(`message.${auth_id}`)
 .listen("Message", (e)=>{
     console.log(e);
@@ -640,5 +671,57 @@ window.Echo.private(`message.${auth_id}`)
         messageBoxContainer.insertAdjacentHTML('beforeend', message);
         scrollToBottom(messageBoxContainer);
     }
+})
+
+const userActive = (id)=>{
+    const contactItems = document.querySelectorAll(`.messenger_list_item[data-id="${id}"]`);
+    console.log(contactItems);
+    for(let i=0;i<contactItems.length;i++){
+        if (contactItems[i]) {
+            const imgElement = contactItems[i].querySelector('.img');
+            if (imgElement) {
+                const spanElement = imgElement.querySelector('span');
+                if (spanElement) {
+                    spanElement.classList.remove('inactive');
+                    spanElement.classList.add('active');
+                }
+            }
+        }
+    }
+}
+const userInactive = (id)=>{
+    const contactItems = document.querySelectorAll(`.messenger_list_item[data-id="${id}"]`);
+    console.log(contactItems);
+    for(let i=0;i<contactItems.length;i++){
+        if (contactItems[i]) {
+            const imgElement = contactItems[i].querySelector('.img');
+            if (imgElement) {
+                const spanElement = imgElement.querySelector('span');
+                if (spanElement) {
+                    spanElement.classList.remove('active');
+                    spanElement.classList.add('inactive');
+                }
+            }
+        }
+    }
+}
+window.Echo.join('online')
+.here(users=>{
+    setActiveUserIds(users);
+    console.log(activeUserIds);
+    users.forEach(user=>{
+        userActive(user.id)
+    })
+})
+.joining(user=>{
+    addActiveNewId(user.id);
+    console.log(activeUserIds);
+    userActive(user.id);
+})
+.leaving(user=>{
+    removeActiveIs(user.id);
+    console.log(activeUserIds);
+
+    userInactive(user.id);
 })
 

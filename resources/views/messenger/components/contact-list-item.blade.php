@@ -2,7 +2,7 @@
 <div class="wsus__user_list_item messenger_list_item" data-id="{{ $user->id }}">
     <div class="img">
         <img src="{{ asset($user->avatar) }}" alt="{{ $user->name }}" class="img-fluid">
-        <span class="active"></span>
+        <span class="inactive"></span>
     </div>
     <div class="text">
         <h5>{{ $user->name }}</h5>
